@@ -5,15 +5,24 @@
 
   const CONFIG = window.APP_CONFIG;
 
+  // --- Simple persistent store using localStorage ---
   const store = {
     get(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def; }catch(e){ return def; } },
     set(k, v){ localStorage.setItem(k, JSON.stringify(v)); },
     del(k){ localStorage.removeItem(k); }
   };
 
-  const K = { USER:"user", BAL:"balance", TASKS:"tasks", HISTORY:"withdraw_history" };
+  // Keys
+  const K = {
+    USER: "user",
+    BAL: "balance",
+    TASKS: "tasks",            // {date: 'YYYY-MM-DD', done: number}
+    HISTORY: "withdraw_history"
+  };
+
   const todayStr = () => new Date().toISOString().slice(0,10);
 
+  // Initialize user from Telegram Web App
   function initUser(){
     let user = store.get(K.USER, null);
     try {
@@ -28,23 +37,35 @@
         };
         store.set(K.USER, user);
       }
-    } catch(e){}
-    if(!user){ user = { id:"guest", first_name:"Guest", last_name:"", username:"", photo_url:"" }; store.set(K.USER,user); }
+    } catch(e){ /* ignore */ }
+    if(!user){
+      // Fallback guest profile
+      user = { id: "guest", first_name: "Guest", last_name: "", username: "", photo_url: "" };
+      store.set(K.USER, user);
+    }
     return user;
   }
 
   function initTasks(){
     const t = store.get(K.TASKS, {date: todayStr(), done: 0});
-    if(t.date !== todayStr()){ t.date = todayStr(); t.done = 0; store.set(K.TASKS, t); }
+    if(t.date !== todayStr()){
+      t.date = todayStr();
+      t.done = 0;
+      store.set(K.TASKS, t);
+    }
     return t;
   }
 
-  function formatUSD(n){ return (Math.round(n*100)/100).toFixed(2); }
+  function formatUSD(n){
+    return (Math.round(n*100)/100).toFixed(2);
+  }
 
+  // State
   let USER = initUser();
   let TASKS = initTasks();
   let BAL = parseFloat(store.get(K.BAL, 0));
 
+  // UI bind
   function refreshUI(){
     const completed = TASKS.done;
     const remaining = Math.max(0, CONFIG.TASKS_PER_DAY - completed);
@@ -60,11 +81,11 @@
     $("#pName").textContent = fullName;
     $("#pUsername").textContent = USER.username || "—";
     $("#pId").textContent = USER.id || "—";
+
     if(USER.photo_url){ $("#avatar").src = USER.photo_url; }
 
-    const refBase = "https://t.me/facebook_farmers_bot?start="; 
+    const refBase = "https://t.me/facebook_farmers_bot?start="; // fallback generic
     $("#refLink").value = refBase + encodeURIComponent(USER.id || "guest");
-
     const limitMsg = $("#limitMsg");
     if(remaining === 0){
       limitMsg.textContent = "Daily limit reached. Come back tomorrow.";
@@ -76,32 +97,43 @@
       $("#earnNow").disabled = false;
     }
 
+    // Withdraw history
     const hist = store.get(K.HISTORY, []);
     const wrap = $("#history");
-    if(wrap){
-      wrap.innerHTML = "";
-      hist.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `<b>${item.method}</b> • $${item.amount} • ${item.address}<br><span class="muted small">${item.time} • ${item.status}</span>`;
-        wrap.appendChild(div);
-      });
-    }
+    wrap.innerHTML = "";
+    hist.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = `<b>${item.method}</b> • $${item.amount} • ${item.address}<br><span class="muted small">${item.time} • ${item.status}</span>`;
+      wrap.appendChild(div);
+    });
   }
 
+  // Handle earning action
   async function doAdAndReward(buttonEl, statusEl){
     const completed = TASKS.done;
-    if(completed >= CONFIG.TASKS_PER_DAY){ statusEl.textContent = "Daily limit reached."; return; }
+    if(completed >= CONFIG.TASKS_PER_DAY){
+      statusEl.textContent = "Daily limit reached.";
+      return;
+    }
+    // Try to show ad via provided SDK method if available
     statusEl.textContent = "Loading ad...";
     buttonEl.disabled = true;
     try{
       if(typeof window.show_9722437 === "function"){
+        // Many networks return a promise; handle both promise & callback-free APIs
         const maybePromise = window.show_9722437('pop');
-        if(maybePromise && typeof maybePromise.then === "function"){ await maybePromise; }
-        else { await new Promise(res => setTimeout(res, 3000)); }
+        if(maybePromise && typeof maybePromise.then === "function"){
+          await maybePromise;
+        }else{
+          // Fallback: wait a short time to simulate ad completion
+          await new Promise(res => setTimeout(res, 3000));
+        }
       }else{
+        // SDK not ready, fallback delay
         await new Promise(res => setTimeout(res, 2500));
       }
+      // On "complete", credit reward
       TASKS.done += 1;
       BAL += CONFIG.REWARD_PER_TASK;
       store.set(K.TASKS, TASKS);
@@ -115,56 +147,29 @@
     }
   }
 
+  // Withdraw
   async function submitWithdraw(e){
     e.preventDefault();
-    const method = document.getElementById("method").value;
-    const address = document.getElementById("address").value.trim();
-    const amount = parseFloat(document.getElementById("amount").value);
-    const msgEl = document.getElementById("withdrawMsg");
+    const method = $("#method").value;
+    const address = $("#address").value.trim();
+    const amount = parseFloat($("#amount").value);
+    const msgEl = $("#withdrawMsg");
     msgEl.textContent = "";
 
-    if(isNaN(amount) || amount < CONFIG.MIN_WITHDRAW){ msgEl.textContent = `Minimum withdrawal is $${CONFIG.MIN_WITHDRAW.toFixed(2)}.`; return; }
-    if(amount > BAL){ msgEl.textContent = "Insufficient balance."; return; }
-    if(!address){ msgEl.textContent = "Enter a valid address/account."; return; }
+    if(isNaN(amount) || amount < CONFIG.MIN_WITHDRAW){
+      msgEl.textContent = `Minimum withdrawal is $${CONFIG.MIN_WITHDRAW.toFixed(2)}.`;
+      return;
+    }
+    if(amount > BAL){
+      msgEl.textContent = "Insufficient balance.";
+      return;
+    }
+    if(!address){
+      msgEl.textContent = "Enter a valid address/account.";
+      return;
+    }
 
-    const text = `💸 Withdraw Request
-User: ${USER.first_name || "Guest"} (${USER.username ? "@"+USER.username : "no username"})
-TG ID: ${USER.id}
-Method: ${method}
-Address: ${address}
-Amount: $${amount.toFixed(2)}
-Balance Before: $${formatUSD(BAL)}
-Time: ${new Date().toLocaleString()}`;
-
-    const url = `https://api.telegram.org/bot${APP_CONFIG.BOT_TOKEN}/sendMessage`;
-  }
-
-  // Fix BOT token scope bug (use CONFIG)
-  const APP_CONFIG = window.APP_CONFIG;
-
-  function sendToAdmin(text){
-    const url = `https://api.telegram.org/bot${APP_CONFIG.BOT_TOKEN}/sendMessage`;
-    const payload = { chat_id: APP_CONFIG.ADMIN_ID, text };
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      mode: "no-cors"
-    }).catch(()=>{});
-  }
-
-  async function submitWithdrawWrapper(e){
-    e.preventDefault();
-    const method = document.getElementById("method").value;
-    const address = document.getElementById("address").value.trim();
-    const amount = parseFloat(document.getElementById("amount").value);
-    const msgEl = document.getElementById("withdrawMsg");
-    msgEl.textContent = "";
-
-    if(isNaN(amount) || amount < APP_CONFIG.MIN_WITHDRAW){ msgEl.textContent = `Minimum withdrawal is $${APP_CONFIG.MIN_WITHDRAW.toFixed(2)}.`; return; }
-    if(amount > BAL){ msgEl.textContent = "Insufficient balance."; return; }
-    if(!address){ msgEl.textContent = "Enter a valid address/account."; return; }
-
+    // Prepare message for admin
     const text =
 `💸 Withdraw Request
 User: ${USER.first_name || "Guest"} (${USER.username ? "@"+USER.username : "no username"})
@@ -175,39 +180,61 @@ Amount: $${amount.toFixed(2)}
 Balance Before: $${formatUSD(BAL)}
 Time: ${new Date().toLocaleString()}`;
 
-    await sendToAdmin(text);
+    const url = `https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`;
+    const payload = { chat_id: CONFIG.ADMIN_ID, text };
 
+    // Try to send to bot admin (CORS-safe best effort)
+    try{
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        mode: "no-cors" // we can't read response but request will be sent
+      });
+    }catch(e){
+      // ignore network errors; still record locally
+    }
+
+    // Deduct balance and save history
     BAL = Math.max(0, BAL - amount);
     store.set(K.BAL, BAL);
     const hist = store.get(K.HISTORY, []);
-    hist.unshift({ method, address, amount: amount.toFixed(2), time: new Date().toLocaleString(), status: "pending" });
+    hist.unshift({
+      method, address, amount: amount.toFixed(2),
+      time: new Date().toLocaleString(), status: "pending"
+    });
     store.set(K.HISTORY, hist);
 
     msgEl.textContent = "Request sent to admin. You'll be paid soon.";
-    document.getElementById("withdrawForm").reset();
+    $("#withdrawForm").reset();
     refreshUI();
   }
 
+  // Navigation
   function switchTab(tab){
     $$(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
     $$(".page").forEach(p => p.classList.remove("active"));
-    document.getElementById("page-" + tab).classList.add("active");
+    $("#page-" + tab).classList.add("active");
   }
 
-  document.getElementById("copyRef").addEventListener("click", () => {
-    const el = document.getElementById("refLink");
-    el.select();
+  // Events
+  $("#copyRef").addEventListener("click", () => {
+    $("#refLink").select();
     document.execCommand("copy");
-    document.getElementById("copyRef").textContent = "Copied";
-    setTimeout(() => document.getElementById("copyRef").textContent = "Copy", 1200);
+    $("#copyRef").textContent = "Copied";
+    setTimeout(() => $("#copyRef").textContent = "Copy", 1200);
   });
 
-  document.getElementById("startEarningBtn").addEventListener("click", () => doAdAndReward(document.getElementById("startEarningBtn"), document.getElementById("limitMsg")));
-  document.getElementById("earnNow").addEventListener("click", () => doAdAndReward(document.getElementById("earnNow"), document.getElementById("earnStatus")));
-  document.getElementById("withdrawForm").addEventListener("submit", submitWithdrawWrapper);
+  $("#startEarningBtn").addEventListener("click", () => doAdAndReward($("#startEarningBtn"), $("#limitMsg")));
+  $("#earnNow").addEventListener("click", () => doAdAndReward($("#earnNow"), $("#earnStatus")));
+  $("#withdrawForm").addEventListener("submit", submitWithdraw);
 
   $$(".tab").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
 
+  // First render
   refreshUI();
+
+  // Auto-open Telegram mini app main button styling
   try{ if(window.Telegram && Telegram.WebApp) { Telegram.WebApp.expand(); }}catch(e){}
+
 })();

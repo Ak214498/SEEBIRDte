@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Online Earning Help</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- User Ad SDK -->
+  <!-- Ad network SDK provided by user -->
   <script src='//libtl.com/sdk.js' data-zone='9722437' data-sdk='show_9722437'></script>
 </head>
 <body>
@@ -41,7 +42,7 @@
 
     <section class="card">
       <h2>Refer & Earn</h2>
-      <p class="muted">Share your referral link to earn more.</p>
+      <p class="muted">Share your invite link to earn more (optional).</p>
       <div class="refer-row">
         <input id="refLink" class="input" readonly />
         <button id="copyRef" class="secondary">Copy</button>
@@ -52,7 +53,7 @@
   <main id="page-earn" class="page">
     <section class="card">
       <h2>Earn</h2>
-      <p class="muted">One ad task only. You can run it up to 50 times daily.</p>
+      <p class="muted">Only one ad task is available. You can complete it up to 50 times per day.</p>
       <div class="earn-box">
         <div class="earn-cta">
           <div class="big-count"><span id="earnRemaining">50</span> left today</div>
