@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Earning Help</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- User Ad SDK -->
+  <script src='//libtl.com/sdk.js' data-zone='9722437' data-sdk='show_9722437'></script>
+</head>
+<body>
+  <header class="app-bar">
+    <button id="backBtn" class="icon-btn" aria-label="back">✕</button>
+    <div class="title">Online Earning Help</div>
+    <div class="menu-dots">⋮</div>
+  </header>
+
+  <main id="page-home" class="page active">
+    <section class="profile-card">
+      <img id="avatar" class="avatar" src="avatar.png" alt="avatar" />
+      <div class="profile-info">
+        <div id="displayName" class="name">Guest</div>
+        <div class="balance">
+          <span>USD</span>
+          <span id="balanceValue">0.00</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Earn Rewards</h2>
+      <div class="tasks">
+        <div><span>Today's Tasks:</span> <b id="totalTasks">50</b></div>
+        <div><span>Completed:</span> <b id="completedTasks">0</b></div>
+        <div><span>Remaining:</span> <b id="remainingTasks">50</b></div>
+      </div>
+      <button id="startEarningBtn" class="primary">Start Earning ▶</button>
+      <p id="limitMsg" class="muted small"></p>
+    </section>
+
+    <section class="card">
+      <h2>Refer & Earn</h2>
+      <p class="muted">Share your referral link to earn more.</p>
+      <div class="refer-row">
+        <input id="refLink" class="input" readonly />
+        <button id="copyRef" class="secondary">Copy</button>
+      </div>
+    </section>
+  </main>
+
+  <main id="page-earn" class="page">
+    <section class="card">
+      <h2>Earn</h2>
+      <p class="muted">One ad task only. You can run it up to 50 times daily.</p>
+      <div class="earn-box">
+        <div class="earn-cta">
+          <div class="big-count"><span id="earnRemaining">50</span> left today</div>
+          <button id="earnNow" class="primary huge">Start Earning</button>
+          <div id="earnStatus" class="muted small"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="page-withdraw" class="page">
+    <section class="card">
+      <h2>Withdraw</h2>
+      <form id="withdrawForm" class="form">
+        <label>Method</label>
+        <select id="method" class="input" required>
+          <option value="Binance USDT (TRX20)">Binance USDT (TRX20)</option>
+          <option value="Payeer USD">Payeer (USD)</option>
+        </select>
+        <label>Address / Account</label>
+        <input id="address" class="input" placeholder="TRX20 wallet or Payeer account" required />
+        <label>Amount (USD)</label>
+        <input id="amount" class="input" type="number" step="0.01" min="1" placeholder=">= 1.00" required />
+        <button class="primary" type="submit">Send Withdraw Request</button>
+        <div id="withdrawMsg" class="muted small"></div>
+      </form>
+      <div class="divider"></div>
+      <h3>History</h3>
+      <div id="history"></div>
+    </section>
+  </main>
+
+  <main id="page-profile" class="page">
+    <section class="card">
+      <h2>Profile</h2>
+      <div class="grid">
+        <div>
+          <div class="label">Name</div>
+          <div id="pName" class="value">Guest</div>
+        </div>
+        <div>
+          <div class="label">Username</div>
+          <div id="pUsername" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Telegram ID</div>
+          <div id="pId" class="value">—</div>
+        </div>
+        <div>
+          <div class="label">Balance (USD)</div>
+          <div id="pBalance" class="value">0.00</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="home" class="tab active">Home</button>
+    <button data-tab="earn" class="tab">Earn</button>
+    <button data-tab="withdraw" class="tab">Withdraw</button>
+    <button data-tab="profile" class="tab">Profile</button>
+  </nav>
+
+  <script>
+    window.APP_CONFIG = {
+      TASKS_PER_DAY: 50,
+      REWARD_PER_TASK: 0.009,
+      MIN_WITHDRAW: 1.0,
+      BOT_TOKEN: "7705212758:AAFOCelJ3S9E6ihgn_F3ZAzjJwbOrfnLH4s",
+      ADMIN_ID: "7674925304"
+    };
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
